@@ -19,11 +19,13 @@ public class EmailSender: IEmailSender
             {
                 From = new MailAddress(_config.GetSection("EmailInfo").GetValue<string>("FromAddress"), "Contato Site litejob.com.br")
             };
-
-            mail.To.Add(new MailAddress(email.To));
+            foreach(string address in email.To)
+            {
+                mail.To.Add(new MailAddress(address));
+            }
 
             mail.Subject = email.Subject;
-            mail.Body = "";
+            mail.Body = email.Body;
             mail.IsBodyHtml = true;
             mail.Priority = MailPriority.High;
 
