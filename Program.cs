@@ -5,6 +5,12 @@ using DocumentValidator;
 using AutenticaAPI;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.IdentityModel.Tokens;
+using System.Collections.Generic;
+using Microsoft.Extensions.Configuration;
+using System.Text;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,7 +19,25 @@ string MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddAuthentication().AddJwtBearer();
+
+var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration.GetValue<string>("Token")));
+var isuer = builder.Configuration.GetValue<string>("Issuer");
+var audience = builder.Configuration.GetValue<string>("Audience");
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters()
+        {
+            ClockSkew = TimeSpan.Zero,
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = isuer,
+            ValidAudience = audience,
+            IssuerSigningKey = key,
+        };
+    });
 builder.Services.AddAuthorization();
 builder.Services.AddHttpClient();
 builder.Services.AddCors(options =>
@@ -72,7 +96,7 @@ static async Task<IResult> Verify([FromBody] Captcha captcha,
 {
     try
     {
-        string url = $"https://www.google.com/recaptcha/api/siteverify?secret=${config.GetValue<string>("captcha_key")}&response=${captcha.Value}";
+        string url = $"https://www.google.com/recaptcha/api/siteverify?secret={config.GetValue<string>("captcha_key")}&response={captcha.Value}";
         var httpRequestMessage = new HttpRequestMessage(
             HttpMethod.Post,
             url);
@@ -145,13 +169,13 @@ public class NovoLeadValidator : AbstractValidator<NovoLead>
 {
     public NovoLeadValidator()
     {
-        RuleFor(x => x.Email).NotEmpty().WithMessage("Email é obrigatório")
+        RuleFor(x => x.Email).NotEmpty().WithMessage("Email é obrigatório") 
                      .EmailAddress().WithMessage("Email inválido");
         RuleFor(x => x.Nome).NotEmpty().WithMessage("Nome é obrigatório");
         RuleFor(x => x.Fone).NotEmpty().WithMessage("Fone é obrigatório");
         RuleFor(x => x.Cnpj).NotEmpty().WithMessage("Cnpj é obrigatório");
-        RuleFor(x => CnpjValidation.Validate(x.Cnpj)).Equal(true)
-                .WithMessage("O CNPJ fornecido é inválido.");
+        RuleFor(x => (CnpjValidation.Validate(x.Cnpj)) || CpfValidation.Validate(x.Cnpj)) .Equal(true)
+                .WithMessage("O CNPJ/CPF fornecido é inválido.");
     }
 }
 public record NovoLead

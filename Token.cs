@@ -27,7 +27,7 @@ public class Token : IToken
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         var token = new JwtSecurityToken(
                claims: claims,
-               expires: DateTime.Now.AddMinutes(5),
+               expires: DateTime.Now.AddSeconds(60),
                signingCredentials: creds,
                issuer: isuer,
                audience: audience
