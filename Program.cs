@@ -46,7 +46,7 @@ builder.Services.AddCors(options =>
         policy =>
         {
             policy.WithOrigins("https://litejob.com.br",
-                               "https://www.litejob.com.br")
+                               "https://www.litejob.com.br", "http://localhost:9500")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .WithMethods("GET", "PUT", "POST", "DELETE", "OPTIONS")
@@ -142,7 +142,7 @@ static async Task<IResult> NovoLead(IValidator<NovoLead> validator, [FromBody] N
     }
     if (db.SaasClient.FirstOrDefault(x => x.Email.ToLower() == lead.Email.ToLower()) != null)
     {
-        return Results.BadRequest("Email já cadastrado!");
+        return Results.BadRequest("Email já foi cadastrado, verifique seu email e solicite a alteração de senha!");
     }
     db.SaasClient.Add(new SaasClient()
     {
@@ -175,7 +175,7 @@ public class NovoLeadValidator : AbstractValidator<NovoLead>
         RuleFor(x => x.Fone).NotEmpty().WithMessage("Fone é obrigatório");
         RuleFor(x => x.Cnpj).NotEmpty().WithMessage("Cnpj é obrigatório");
         RuleFor(x => (CnpjValidation.Validate(x.Cnpj)) || CpfValidation.Validate(x.Cnpj)) .Equal(true)
-                .WithMessage("O CNPJ/CPF fornecido é inválido.");
+                .WithMessage("O CNPJ/CPF fornecido é inválido.").WithName("Cnpj");
     }
 }
 public record NovoLead
