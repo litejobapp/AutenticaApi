@@ -142,12 +142,13 @@ static async Task<IResult> NovoLead(IValidator<NovoLead> validator, [FromBody] N
     }
     if (db.SaasClient.FirstOrDefault(x => x.Email.ToLower() == lead.Email.ToLower()) != null)
     {
-        return Results.BadRequest("Email já foi cadastrado, verifique seu email e solicite a alteração de senha!");
+        return Results.BadRequest("Email cadastrado, verifique seu email e solicite a alteração de senha!");
     }
+    var chave = Guid.NewGuid().ToString();
     db.SaasClient.Add(new SaasClient()
     {
         Cnpj = lead.Cnpj,
-        ChaveValidacao = Guid.NewGuid().ToString(),
+        ChaveValidacao = chave,
         DataCriacao = DateTime.Now,
         DataValidacao = null,
         Email = lead.Email,
@@ -160,7 +161,8 @@ static async Task<IResult> NovoLead(IValidator<NovoLead> validator, [FromBody] N
     });
     await db.SaveChangesAsync();
 
-    await mailSender.EnviaEmail(new Email() { Body = $"Novo lead de {lead.Nome} - {lead.Cnpj} - {lead.Email}.", Subject = "Novo Lead no site", To = ["julianomiquelleto@gmail.com", "administrador@litejob.com.br"] });
+    await mailSender.EnviaEmail(new Email() { Body = $"Novo lead de {lead.Nome} - {lead.Cnpj} - {lead.Email}.", Subject = "Boas vindas LiteJob", 
+        To = ["julianomiquelleto@gmail.com", lead.Email] }, chave);
 
     return TypedResults.Created($"/cliente/{lead.Email}", lead);
 }

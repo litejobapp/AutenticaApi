@@ -2,5 +2,5 @@
 
 public interface IEmailSender
 {
-    Task<bool> EnviaEmail(Email email);
+    Task<bool> EnviaEmail(Email email,string chaveValidacao);
 }
