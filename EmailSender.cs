@@ -1,5 +1,6 @@
-﻿using System.Net.Mail;
-using System.Net;
+﻿
+using Newtonsoft.Json;
+using RestSharp;
 
 namespace AutenticaAPI;
 
@@ -174,27 +175,18 @@ border-color: #0867ec; color: #ffffff;"">##button_title##</a> </td>
         try
         {
 
-            MailMessage mail = new MailMessage()
+            var client = new RestClient(_config.GetSection("MailTrap").GetValue<string>("Api"));
+            var request = new RestRequest();
+            request.AddHeader("Authorization", "Bearer "+ _config.GetSection("MailTrap").GetValue<string>("Secret"));
+            request.AddHeader("Content-Type", "application/json");
+            if (email.EmailType == EnumEmailType.Welcome)
             {
-                From = new MailAddress(_config.GetSection("EmailInfo").GetValue<string>("FromAddress"), "Contato Site litejob.com.br")
-            };
-            foreach(string address in email.To)
-            {
-                mail.To.Add(new MailAddress(address));
+                var emailWelcome = FormatEmailWelcome(email, chaveValidacao);
+                request.AddParameter("application/json", emailWelcome, ParameterType.RequestBody);
             }
+            
+            var response = client.Post(request);
 
-            mail.Subject = email.Subject;
-            mail.Body =FormatEmail(email, chaveValidacao);
- 
-            mail.IsBodyHtml = true;
-            mail.Priority = MailPriority.High;
-
-            using (SmtpClient smtp = new SmtpClient(_config.GetSection("EmailInfo").GetValue<string>("Host"), int.Parse(_config.GetSection("EmailInfo").GetValue<string>("Port"))))
-            {
-                smtp.Credentials = new NetworkCredential(_config.GetSection("EmailInfo").GetValue<string>("FromAddress"), _config.GetSection("EmailInfo").GetValue<string>("Password"));
-                smtp.EnableSsl = true;
-                smtp.Send(mail);
-            }
             return true;
         }
         catch (Exception ex)
@@ -203,22 +195,49 @@ border-color: #0867ec; color: #ffffff;"">##button_title##</a> </td>
         }
     }
 
-    private string FormatEmail(Email email,string chave)
-    {
-        var emailStr = FormatEmailWelcome(email, chave);
-     
-        return emailStr;
-    }
+
     private string FormatEmailWelcome(Email email,string chave)
     {
         var url = $"{_config.GetSection("EmailInfo").GetValue<string>("Url")}?welcomeId={chave}";
-        templateEmail = !string.IsNullOrEmpty(email.Subject) ? templateEmail.Replace("##url##", url) : templateEmail;
-        templateEmail = !string.IsNullOrEmpty(email.Subject) ? templateEmail.Replace("##button_title##", "Acessar LiteJob") : templateEmail;
-        templateEmail = !string.IsNullOrEmpty(email.Subject) ? templateEmail.Replace("##titulo##", "Boas-vindas LiteJob") : templateEmail;
-        templateEmail = !string.IsNullOrEmpty(email.Subject) ? templateEmail.Replace("##sub-titulo##", email.Body) : templateEmail;
-        templateEmail = !string.IsNullOrEmpty(email.Subject) ? templateEmail.Replace("##footer##", "Agradeçemos de todo ❤️, esperamos que sua jornada seja agradável.") : templateEmail;
+        var listTo  = new List<To>();
+        foreach(var item in email.To)
+        {
+            listTo.Add(new To() { email = item });
+        }
+        var emailWelcome = new MailTrapEmailWelcome()
+        {
+            from = new From() { name = "Boas vindas LiteJob", email = "hello@litejob.com.br" },
+            template_uuid = "07398db8-c5f1-4b2d-b2f2-c8453095e101",
+            to = listTo,
+            template_variables = new TemplateVariablesWelcome() { name = email.Name, url = url }
+        };
 
-        return templateEmail;
+
+        return JsonConvert.SerializeObject(emailWelcome);
+    }
+
+    private class From
+    {
+        public string email { get; set; }
+        public string name { get; set; }
+    }
+
+    private class MailTrapEmailWelcome
+    {
+        public From from { get; set; }
+        public List<To> to { get; set; }
+        public string template_uuid { get; set; }
+        public TemplateVariablesWelcome template_variables { get; set; }
+    }
+
+    private class TemplateVariablesWelcome
+    {
+        public string name { get; set; }
+        public string url { get; set; }
+    }
+    private class To
+    {
+        public string email { get; set; }
     }
 
 }

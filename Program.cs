@@ -46,7 +46,8 @@ builder.Services.AddCors(options =>
         policy =>
         {
             policy.WithOrigins("https://litejob.com.br",
-                               "https://www.litejob.com.br", "http://localhost:9500")
+                               "https://www.litejob.com.br", 
+                               "http://localhost:9500")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .WithMethods("GET", "PUT", "POST", "DELETE", "OPTIONS")
@@ -161,7 +162,8 @@ static async Task<IResult> NovoLead(IValidator<NovoLead> validator, [FromBody] N
     });
     await db.SaveChangesAsync();
 
-    await mailSender.EnviaEmail(new Email() { Body = $"Novo lead de {lead.Nome} - {lead.Cnpj} - {lead.Email}.", Subject = "Boas vindas LiteJob", 
+    await mailSender.EnviaEmail(new Email() {EmailType = EnumEmailType.Welcome, Name = lead.Nome,
+       
         To = ["julianomiquelleto@gmail.com", lead.Email] }, chave);
 
     return TypedResults.Created($"/cliente/{lead.Email}", lead);
